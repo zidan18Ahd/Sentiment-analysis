@@ -1,24 +1,30 @@
 import streamlit as st
 import tensorflow as tf
 import pickle
-import numpy as np
 import re
+import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
-# load model
-model = tf.keras.models.load_model("sentiment_cnn.keras")
+# download nltk data on server
+nltk.download('stopwords')
+nltk.download('wordnet')
 
-# load tokenizer
-with open("tokenizer.pkl", "rb") as f:
-    tokenizer = pickle.load(f)
+@st.cache_resource
+def load_all():
+    model = tf.keras.models.load_model("sentiment_cnn.keras")
+    with open("tokenizer.pkl", "rb") as f:
+        tokenizer = pickle.load(f)
+
+    pattern = re.compile(r"(?:\@|https?\://)\S+|[^\w\s#]")
+    lemm = WordNetLemmatizer()
+    stop_words = set(stopwords.words("english"))
+
+    return model, tokenizer, pattern, lemm, stop_words
+
+model, tokenizer, pattern, lemm, stop_words = load_all()
 
 max_len = 80
-
-# preprocessing (same as training)
-pattern = re.compile(r"(?:\@|https?\://)\S+|[^\w\s#]")
-lemm = WordNetLemmatizer()
-stop_words = set(stopwords.words("english"))
 
 def preprocess(text):
     text = text.lower()
@@ -38,6 +44,6 @@ if st.button("Predict"):
     pred = model.predict(pad)[0][0]
 
     if pred > 0.5:
-        st.success("Positive")
+        st.success("Positive ")
     else:
         st.error("Negative ")
